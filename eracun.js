@@ -169,7 +169,7 @@ var izpisiRacun = function(zahteva, odgovor, pesmi) {
         pesmiIzRacuna(trenutniRacun, function(pesem) {
           odgovor.setHeader('content-type', 'text/xml');
           odgovor.render('eslog', {
-            vizualiziraj: true, //zahteva.params.oblika == 'html' ? true : false,
+            vizualiziraj: true,  //zahteva.params.oblika == 'html' ? true : false,
             stranka: stranka[0],
             postavkeRacuna: pesem,
           });  
