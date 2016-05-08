@@ -47,6 +47,13 @@ function davcnaStopnja(izvajalec, zanr) {
 
 // Prikaz seznama pesmi na strani
 streznik.get('/', function(zahteva, odgovor) {
+  
+  if (!zahteva.session.stranka) {
+    odgovor.redirect('/prijava');
+     
+    return;
+  }
+  
   pb.all("SELECT Track.TrackId AS id, Track.Name AS pesem, \
           Artist.Name AS izvajalec, Track.UnitPrice * " +
           razmerje_usd_eur + " AS cena, \
@@ -146,6 +153,17 @@ var strankaIzRacuna = function(racunId, callback) {
     })
 }
 
+var strankaID = function(IDstranke, callback) {
+  pb.all("SELECT Customer.* FROM Customer, Invoice \
+            WHERE Customer.CustomerId = "+IDstranke, //Invoice.CustomerId AND Invoice.InvoiceId = " + IDstranke,
+    function(napaka, vrstice) {
+  
+    if (napaka) callback(null);
+    else callback(vrstice);
+    
+    });
+};
+
 // Izpis računa v HTML predstavitvi na podlagi podatkov iz baze
 streznik.post('/izpisiRacunBaza', function(zahteva, odgovor) {
   odgovor.end();
@@ -153,21 +171,25 @@ streznik.post('/izpisiRacunBaza', function(zahteva, odgovor) {
 
 // Izpis računa v HTML predstavitvi ali izvorni XML obliki
 streznik.get('/izpisiRacun/:oblika', function(zahteva, odgovor) {
-  pesmiIzKosarice(zahteva, function(pesmi) {
+  strankaID(zahteva.session.stranka, function(stranka) {
+    pesmiIzKosarice(zahteva, function(pesmi) {
     if (!pesmi) {
       odgovor.sendStatus(500);
     } else if (pesmi.length == 0) {
       odgovor.send("<p>V košarici nimate nobene pesmi, \
         zato računa ni mogoče pripraviti!</p>");
     } else {
+      //strankaID(zahteva.session.trenutnaStranka, function(etrenutnaStranka) {
       odgovor.setHeader('content-type', 'text/xml');
       odgovor.render('eslog', {
         vizualiziraj: zahteva.params.oblika == 'html' ? true : false,
+        stranka: stranka[0],
         postavkeRacuna: pesmi
-      })  
-    }
-  })
-})
+        });
+      }
+    });
+  });
+});
 
 // Privzeto izpiši račun v HTML obliki
 streznik.get('/izpisiRacun', function(zahteva, odgovor) {
@@ -233,6 +255,7 @@ streznik.post('/stranka', function(zahteva, odgovor) {
   var form = new formidable.IncomingForm();
   
   form.parse(zahteva, function (napaka1, polja, datoteke) {
+    zahteva.session.stranka = polja.seznamStrank;
     odgovor.redirect('/')
   });
 })
